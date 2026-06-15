@@ -1,0 +1,6 @@
+{
+  "name": "InstaClone",
+  "description": "A functional Instagram clone with a feed and profile, built with Jetpack Compose.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
