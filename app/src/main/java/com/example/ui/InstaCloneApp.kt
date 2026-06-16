@@ -12,6 +12,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -22,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +46,8 @@ import com.example.data.Snaply
 import com.example.presentation.home.HomeViewModel
 import com.example.presentation.profile.ProfileViewModel
 import com.example.presentation.explore.ExploreViewModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.presentation.settings.SettingsViewModel
@@ -329,6 +336,10 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
     val isSaved = post.isSaved
     
     val dynamicCommentsCount = MockData.comments.count { it.postId == post.id }
+    
+    val scope = rememberCoroutineScope()
+    var showHeart by remember { mutableStateOf(false) }
+    val heartScale = remember { Animatable(0f) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Header
@@ -356,15 +367,52 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
             Icon(Icons.Default.MoreVert, contentDescription = "More options")
         }
 
-        // Image
-        AsyncImage(
-            model = post.imageUrl,
-            contentDescription = "Post image",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f) // Square image
-        )
+        // Image and Heart Animation
+        Box(contentAlignment = Alignment.Center) {
+            AsyncImage(
+                model = post.imageUrl,
+                contentDescription = "Post image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f) // Square image
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                onLikeToggle(post.id, post.isLiked)
+                                scope.launch {
+                                    showHeart = true
+                                    heartScale.snapTo(0f)
+                                    heartScale.animateTo(
+                                        targetValue = 1.2f,
+                                        animationSpec = tween(200)
+                                    )
+                                    delay(200)
+                                    heartScale.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = tween(200)
+                                    )
+                                    showHeart = false
+                                }
+                            }
+                        )
+                    }
+            )
+            
+            if (showHeart) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Large Like",
+                    tint = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .size(100.dp)
+                        .graphicsLayer {
+                            scaleX = heartScale.value
+                            scaleY = heartScale.value
+                        }
+                )
+            }
+        }
 
         // Actions
         Row(
