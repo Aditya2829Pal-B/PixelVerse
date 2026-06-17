@@ -50,7 +50,7 @@ class HomeViewModel(
                 isLiked = entity.isLiked,
                 isSaved = entity.isSaved
             )
-        }
+        }.reversed()
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -60,6 +60,25 @@ class HomeViewModel(
     fun toggleLike(postId: String, currentLikeStatus: Boolean) {
         viewModelScope.launch {
             postRepository.toggleLike(postId, !currentLikeStatus)
+        }
+    }
+    
+    fun refreshFeed(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(1500) // Simulate network delay
+            val newPost = PostEntity(
+                id = java.util.UUID.randomUUID().toString(),
+                userId = "2", // Using an existing dummy user
+                imageUrl = "https://picsum.photos/400/400?random=${System.currentTimeMillis()}",
+                caption = "Just refreshed my feed! \uD83D\uDE0A",
+                likesCount = (10..500).random(),
+                commentsCount = (0..50).random(),
+                timeAgo = "Just now",
+                isLiked = false,
+                isSaved = false
+            )
+            postRepository.insertPost(newPost)
+            onComplete()
         }
     }
 

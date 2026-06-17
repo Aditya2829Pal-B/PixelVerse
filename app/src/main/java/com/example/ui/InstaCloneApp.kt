@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -196,6 +197,15 @@ fun HomeFeedScreen(
 ) {
     val posts by homeViewModel.feedPosts.collectAsState()
     
+    var isRefreshing by remember { mutableStateOf(false) }
+    
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        homeViewModel.refreshFeed {
+            isRefreshing = false
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -216,22 +226,28 @@ fun HomeFeedScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            item {
-                SnapliesRow(snaplies = MockData.snaplies)
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
-            }
-            items(posts) { post ->
-                PostItem(
-                    post = post,
-                    onLikeToggle = { id, currentLikeStatus ->
-                        homeViewModel.toggleLike(id, currentLikeStatus)
-                    }
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                item {
+                    SnapliesRow(snaplies = MockData.snaplies)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
+                }
+                items(posts) { post ->
+                    PostItem(
+                        post = post,
+                        onLikeToggle = { id, currentLikeStatus ->
+                            homeViewModel.toggleLike(id, currentLikeStatus)
+                        }
+                    )
+                }
             }
         }
     }
