@@ -198,12 +198,32 @@ fun HomeFeedScreen(
     val posts by homeViewModel.feedPosts.collectAsState()
     
     var isRefreshing by remember { mutableStateOf(false) }
+    var showCameraDialog by remember { mutableStateOf(false) }
     
     val onRefresh: () -> Unit = {
         isRefreshing = true
         homeViewModel.refreshFeed {
             isRefreshing = false
         }
+    }
+    
+    if (showCameraDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraDialog = false },
+            icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Capture") },
+            title = { Text("Create New Post") },
+            text = { Text("Would you like to capture a photo or a video for your feed?") },
+            confirmButton = {
+                TextButton(onClick = { showCameraDialog = false }) {
+                    Text("Photo")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraDialog = false }) {
+                    Text("Video")
+                }
+            }
+        )
     }
     
     Scaffold(
@@ -224,6 +244,11 @@ fun HomeFeedScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showCameraDialog = true }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add Post")
+            }
         }
     ) { padding ->
         PullToRefreshBox(
