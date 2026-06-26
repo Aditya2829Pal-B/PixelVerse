@@ -1,61 +1,56 @@
 package com.example.data.repository
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.example.data.local.dao.UserDao
 import com.example.data.local.entity.UserEntity
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import java.util.UUID
-
-private val Context.dataStore by preferencesDataStore(name = "auth_prefs")
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
-    private val userDao: UserDao,
-    private val context: Context
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
-    private val loggedInUserIdKey = stringPreferencesKey("logged_in_user_id")
+    private val _currentUserId = MutableStateFlow<String?>(auth.currentUser?.uid)
+    val currentUserId: StateFlow<String?> = _currentUserId
 
-    val currentUserId: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[loggedInUserIdKey]
+    init {
+        auth.addAuthStateListener { firebaseAuth ->
+            _currentUserId.value = firebaseAuth.currentUser?.uid
+        }
     }
 
-    suspend fun login(username: String, passwordHash: String): Boolean {
-        val user = userDao.getUserByUsername(username)
-        if (user != null && user.passwordHash == passwordHash) {
-            context.dataStore.edit { prefs ->
-                prefs[loggedInUserIdKey] = user.id
+    suspend fun loginWithGoogle(idToken: String): Boolean {
+        return try {
+            val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = auth.signInWithCredential(credential).await()
+            val user = authResult.user
+            if (user != null) {
+                // Ensure user exists in Firestore
+                val userRef = firestore.collection("users").document(user.uid)
+                val snapshot = userRef.get().await()
+                if (!snapshot.exists()) {
+                    val newUser = mapOf(
+                        "id" to user.uid,
+                        "username" to (user.displayName ?: "User"),
+                        "profilePicUrl" to (user.photoUrl?.toString() ?: ""),
+                        "bio" to "New User",
+                        "followersCount" to 0,
+                        "followingCount" to 0
+                    )
+                    userRef.set(newUser).await()
+                }
             }
-            return true
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
-        return false
-    }
-
-    suspend fun signup(username: String, passwordHash: String): Boolean {
-        if (userDao.getUserByUsername(username) != null) return false
-        
-        val newId = UUID.randomUUID().toString()
-        val user = UserEntity(
-            id = newId,
-            username = username,
-            bio = "New User",
-            profilePicUrl = "https://picsum.photos/seed/$newId/150/150",
-            followersCount = 0,
-            followingCount = 0,
-            passwordHash = passwordHash
-        )
-        userDao.insertUser(user)
-        context.dataStore.edit { prefs ->
-            prefs[loggedInUserIdKey] = newId
-        }
-        return true
     }
 
     suspend fun logout() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(loggedInUserIdKey)
-        }
+        auth.signOut()
     }
 }

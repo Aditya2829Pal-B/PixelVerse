@@ -16,34 +16,18 @@ import kotlinx.coroutines.launch
 
 class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
-    val currentUserId: StateFlow<String?> = authRepository.currentUserId.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
-    )
+    val currentUserId: StateFlow<String?> = authRepository.currentUserId
     
     // For signaling loading / error states
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
-    fun login(username: String, passwordHash: String) {
+    fun loginWithGoogle(idToken: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            val success = authRepository.login(username, passwordHash)
+            val success = authRepository.loginWithGoogle(idToken)
             if (!success) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Invalid credentials") }
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
-            }
-        }
-    }
-
-    fun signup(username: String, passwordHash: String) {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch {
-            val success = authRepository.signup(username, passwordHash)
-            if (!success) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Username already exists") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to sign in with Google") }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
             }

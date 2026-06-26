@@ -7,6 +7,9 @@ import com.example.data.local.AppDatabase
 import com.example.data.repository.PostRepository
 import com.example.data.repository.UserRepository
 import com.example.data.repository.AuthRepository
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
 
 interface AppContainer {
     val database: AppDatabase
@@ -25,7 +28,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
     
     override val postRepository: PostRepository by lazy {
-        PostRepository(database.postDao())
+        PostRepository(Firebase.firestore)
     }
     
     override val userRepository: UserRepository by lazy {
@@ -33,6 +36,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
     
     override val authRepository: AuthRepository by lazy {
-        AuthRepository(database.userDao(), context)
+        AuthRepository(Firebase.auth, Firebase.firestore)
     }
 }

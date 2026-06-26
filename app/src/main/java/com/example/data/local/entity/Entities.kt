@@ -16,15 +16,15 @@ data class UserEntity(
 
 @Entity(tableName = "posts")
 data class PostEntity(
-    @PrimaryKey val id: String,
-    val userId: String,
-    val imageUrl: String,
-    val caption: String,
-    val likesCount: Int,
-    val commentsCount: Int,
-    val timeAgo: String,
-    val isLiked: Boolean,
-    val isSaved: Boolean
+    @PrimaryKey val id: String = "",
+    val userId: String = "",
+    val imageUrl: String = "",
+    val caption: String = "",
+    val likesCount: Int = 0,
+    val commentsCount: Int = 0,
+    val timeAgo: String = "",
+    val isLiked: Boolean = false,
+    val isSaved: Boolean = false
 )
 
 @Entity(tableName = "comments")
