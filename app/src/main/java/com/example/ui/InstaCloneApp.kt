@@ -372,8 +372,9 @@ fun SnaplyItem(imageUrl: String, username: String, isViewed: Boolean, isAddSnapl
 fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) {
     var showComments by remember { mutableStateOf(false) }
     
-    val isLiked = post.isLiked
-    val likesCount = post.likesCount
+    var localIsLiked by remember(post.id, post.isLiked) { mutableStateOf(post.isLiked) }
+    var localLikesCount by remember(post.id, post.likesCount) { mutableStateOf(post.likesCount) }
+    
     val isSaved = post.isSaved
     
     val dynamicCommentsCount = MockData.comments.count { it.postId == post.id }
@@ -381,6 +382,13 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
     val scope = rememberCoroutineScope()
     var showHeart by remember { mutableStateOf(false) }
     val heartScale = remember { Animatable(0f) }
+
+    val handleLikeToggle = {
+        val currentStatus = localIsLiked
+        localIsLiked = !currentStatus
+        localLikesCount += if (localIsLiked) 1 else -1
+        onLikeToggle(post.id, currentStatus)
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Header
@@ -420,7 +428,9 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onDoubleTap = {
-                                onLikeToggle(post.id, post.isLiked)
+                                if (!localIsLiked) {
+                                    handleLikeToggle()
+                                }
                                 scope.launch {
                                     showHeart = true
                                     heartScale.snapTo(0f)
@@ -464,11 +474,11 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onLikeToggle(post.id, post.isLiked) }) {
+                IconButton(onClick = { handleLikeToggle() }) {
                     Icon(
-                        imageVector = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        imageVector = if (localIsLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Like",
-                        tint = if (post.isLiked) Color.Red else MaterialTheme.colorScheme.onBackground
+                        tint = if (localIsLiked) Color.Red else MaterialTheme.colorScheme.onBackground
                     )
                 }
                 IconButton(onClick = { showComments = true }) {
@@ -494,7 +504,7 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
 
         // Likes
         Text(
-            text = "$likesCount likes",
+            text = "$localLikesCount likes",
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp,
             modifier = Modifier.padding(horizontal = 12.dp)
