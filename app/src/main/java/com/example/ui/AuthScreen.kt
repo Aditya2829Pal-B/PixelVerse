@@ -21,6 +21,10 @@ import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.util.UUID
 
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+
 @Composable
 fun AuthScreen(
     authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
@@ -28,6 +32,11 @@ fun AuthScreen(
     val uiState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    
+    var isLoginMode by remember { mutableStateOf(true) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -44,10 +53,67 @@ fun AuthScreen(
         )
         Spacer(modifier = Modifier.height(32.dp))
         
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        if (!isLoginMode) {
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        
         if (uiState.errorMessage != null) {
             Text(text = uiState.errorMessage!!, color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(16.dp))
         }
+
+        Button(
+            onClick = {
+                if (isLoginMode) {
+                    authViewModel.loginWithEmail(email, password)
+                } else {
+                    authViewModel.signupWithEmail(email, password, username)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading && email.isNotBlank() && password.isNotBlank() && (isLoginMode || username.isNotBlank())
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text(if (isLoginMode) "Log In" else "Sign Up")
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        TextButton(onClick = { isLoginMode = !isLoginMode }) {
+            Text(if (isLoginMode) "Don't have an account? Sign up" else "Already have an account? Log in")
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "OR", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {

@@ -22,6 +22,30 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    fun loginWithEmail(email: String, password: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            val success = authRepository.loginWithEmail(email, password)
+            if (!success) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to sign in. Check credentials and google-services.json.") }
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun signupWithEmail(email: String, password: String, username: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            val success = authRepository.signupWithEmail(email, password, username)
+            if (!success) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to sign up. Check credentials and google-services.json.") }
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
     fun loginWithGoogle(idToken: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {

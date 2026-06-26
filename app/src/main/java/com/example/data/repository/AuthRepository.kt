@@ -22,6 +22,39 @@ class AuthRepository(
         }
     }
 
+    suspend fun loginWithEmail(email: String, password: String): Boolean {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun signupWithEmail(email: String, password: String, username: String): Boolean {
+        return try {
+            val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+            val user = authResult.user
+            if (user != null) {
+                // Ensure user exists in Firestore
+                val userRef = firestore.collection("users").document(user.uid)
+                val newUser = mapOf(
+                    "id" to user.uid,
+                    "username" to username,
+                    "profilePicUrl" to "",
+                    "bio" to "New User",
+                    "followersCount" to 0,
+                    "followingCount" to 0
+                )
+                userRef.set(newUser).await()
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
     suspend fun loginWithGoogle(idToken: String): Boolean {
         return try {
             val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
