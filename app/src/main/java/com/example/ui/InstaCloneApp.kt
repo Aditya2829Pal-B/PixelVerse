@@ -52,7 +52,7 @@ import kotlinx.coroutines.delay
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.presentation.settings.SettingsViewModel
-
+import com.example.presentation.feed.ApiFeedViewModel
 import com.example.presentation.auth.AuthViewModel
 
 @Composable
@@ -193,16 +193,17 @@ fun PlaceholderScreen(title: String) {
 @Composable
 fun HomeFeedScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
+    feedViewModel: ApiFeedViewModel = viewModel(factory = ApiFeedViewModel.Factory)
 ) {
-    val posts by homeViewModel.feedPosts.collectAsState()
+    val posts by feedViewModel.feedPosts.collectAsState()
+    val isLoading by feedViewModel.isLoading.collectAsState()
     
     var isRefreshing by remember { mutableStateOf(false) }
     var showCameraDialog by remember { mutableStateOf(false) }
     
     val onRefresh: () -> Unit = {
         isRefreshing = true
-        homeViewModel.refreshFeed {
+        feedViewModel.refreshFeed {
             isRefreshing = false
         }
     }
@@ -224,6 +225,16 @@ fun HomeFeedScreen(
                 }
             }
         )
+    }
+    
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Infinite scroll
+    LaunchedEffect(listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index) {
+        val lastIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        if (lastIndex >= posts.size - 2 && !isLoading && posts.isNotEmpty()) {
+            feedViewModel.loadMorePosts()
+        }
     }
     
     Scaffold(
@@ -259,6 +270,7 @@ fun HomeFeedScreen(
                 .padding(padding)
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize()
             ) {
                 item {
@@ -269,9 +281,21 @@ fun HomeFeedScreen(
                     PostItem(
                         post = post,
                         onLikeToggle = { id, currentLikeStatus ->
-                            homeViewModel.toggleLike(id, currentLikeStatus)
+                            feedViewModel.toggleLike(id, currentLikeStatus)
                         }
                     )
+                }
+                if (isLoading && posts.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        }
+                    }
                 }
             }
         }
