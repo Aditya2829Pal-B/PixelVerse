@@ -228,6 +228,24 @@ fun HomeFeedScreen(
     }
     
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    
+    var selectedSnaply by remember { mutableStateOf<com.example.data.Snaply?>(null) }
+
+    if (selectedSnaply != null) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { selectedSnaply = null },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            FullScreenSnaplyViewer(
+                snaply = selectedSnaply!!,
+                onDismiss = { selectedSnaply = null }
+            )
+        }
+    }
 
     // Infinite scroll
     LaunchedEffect(listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index) {
@@ -274,7 +292,9 @@ fun HomeFeedScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 item {
-                    SnapliesRow(snaplies = MockData.snaplies)
+                    SnapliesRow(snaplies = MockData.snaplies, onSnaplyClick = { snaply ->
+                        selectedSnaply = snaply
+                    })
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
                 }
                 items(posts) { post ->
@@ -303,7 +323,7 @@ fun HomeFeedScreen(
 }
 
 @Composable
-fun SnapliesRow(snaplies: List<Snaply>) {
+fun SnapliesRow(snaplies: List<Snaply>, onSnaplyClick: (Snaply) -> Unit) {
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -317,21 +337,23 @@ fun SnapliesRow(snaplies: List<Snaply>) {
                 imageUrl = MockData.currentUser.profilePicUrl,
                 username = "Your Snaply",
                 isViewed = true,
-                isAddSnaply = true
+                isAddSnaply = true,
+                onClick = {}
             )
         }
         items(snaplies) { snaply ->
             SnaplyItem(
                 imageUrl = snaply.user.profilePicUrl,
                 username = snaply.user.username,
-                isViewed = snaply.isViewed
+                isViewed = snaply.isViewed,
+                onClick = { onSnaplyClick(snaply) }
             )
         }
     }
 }
 
 @Composable
-fun SnaplyItem(imageUrl: String, username: String, isViewed: Boolean, isAddSnaply: Boolean = false) {
+fun SnaplyItem(imageUrl: String, username: String, isViewed: Boolean, isAddSnaply: Boolean = false, onClick: () -> Unit = {}) {
     val gradientColors = if (isViewed) {
         listOf(Color.LightGray, Color.LightGray)
     } else {
@@ -346,7 +368,7 @@ fun SnaplyItem(imageUrl: String, username: String, isViewed: Boolean, isAddSnapl
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier.width(72.dp).clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -792,5 +814,65 @@ fun ProfileStat(count: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = count, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Text(text = label, fontSize = 14.sp)
+    }
+}
+
+@Composable
+fun FullScreenSnaplyViewer(snaply: com.example.data.Snaply, onDismiss: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        AsyncImage(
+            model = "https://picsum.photos/seed/${snaply.id}/800/1200",
+            contentDescription = "Snaply content",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        
+        var progress by remember { mutableStateOf(0f) }
+        LaunchedEffect(Unit) {
+            val duration = 4000L
+            val interval = 16L
+            val steps = duration / interval
+            for (i in 0..steps) {
+                kotlinx.coroutines.delay(interval)
+                progress = i.toFloat() / steps
+            }
+            onDismiss()
+        }
+        
+        Column {
+            Spacer(modifier = Modifier.height(32.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .height(2.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape),
+                color = Color.White,
+                trackColor = Color.White.copy(alpha = 0.3f),
+            )
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = snaply.user.profilePicUrl,
+                    contentDescription = "Profile Pic",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = snaply.user.username, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                }
+            }
+        }
     }
 }
