@@ -428,6 +428,7 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
     val scope = rememberCoroutineScope()
     var showHeart by remember { mutableStateOf(false) }
     val heartScale = remember { Animatable(0f) }
+    val likeButtonScale = remember { Animatable(1f) }
 
     val handleLikeToggle = {
         val currentStatus = localIsLiked
@@ -476,6 +477,10 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
                             onDoubleTap = {
                                 if (!localIsLiked) {
                                     handleLikeToggle()
+                                    scope.launch {
+                                        likeButtonScale.animateTo(1.3f, animationSpec = androidx.compose.animation.core.tween(100))
+                                        likeButtonScale.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(100))
+                                    }
                                 }
                                 scope.launch {
                                     showHeart = true
@@ -520,11 +525,21 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { handleLikeToggle() }) {
+                IconButton(onClick = { 
+                    handleLikeToggle()
+                    scope.launch {
+                        likeButtonScale.animateTo(1.3f, animationSpec = androidx.compose.animation.core.tween(100))
+                        likeButtonScale.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(100))
+                    }
+                }) {
                     Icon(
                         imageVector = if (localIsLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Like",
-                        tint = if (localIsLiked) Color.Red else MaterialTheme.colorScheme.onBackground
+                        tint = if (localIsLiked) Color.Red else MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = likeButtonScale.value
+                            scaleY = likeButtonScale.value
+                        }
                     )
                 }
                 IconButton(onClick = { showComments = true }) {
