@@ -10,7 +10,8 @@ data class User(
 data class Snaply(
     val id: String,
     val user: User,
-    val isViewed: Boolean = false
+    val isViewed: Boolean = false,
+    val imageUrl: String = "https://picsum.photos/seed/${id}/800/1200"
 )
 
 data class Post(

@@ -18,10 +18,45 @@ import kotlinx.coroutines.flow.combine
 import com.example.data.Post
 import com.example.data.User
 
+import com.example.data.Snaply
+import com.example.data.repository.AuthRepository
+import kotlinx.coroutines.flow.firstOrNull
+import com.example.data.local.entity.SnaplyEntity
+
 class HomeViewModel(
     private val postRepository: PostRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
+
+    val feedSnaplies: StateFlow<List<Snaply>> = combine(
+        postRepository.allSnaplies,
+        userRepository.allUsers
+    ) { snaplies, users ->
+        snaplies.map { entity ->
+            val uEntity = users.find { it.id == entity.userId }
+            val u = if (uEntity != null) {
+                User(
+                    id = uEntity.id,
+                    username = uEntity.username,
+                    profilePicUrl = uEntity.profilePicUrl,
+                    fullName = uEntity.bio
+                )
+            } else {
+                User("0", "unknown", "https://picsum.photos/150", "Unknown")
+            }
+            Snaply(
+                id = entity.id,
+                user = u,
+                isViewed = false,
+                imageUrl = entity.imageUrl
+            )
+        }.sortedByDescending { it.id } // simple sort
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val feedPosts: StateFlow<List<Post>> = combine(
         postRepository.allPosts,
@@ -66,19 +101,26 @@ class HomeViewModel(
     fun refreshFeed(onComplete: () -> Unit) {
         viewModelScope.launch {
             kotlinx.coroutines.delay(1500) // Simulate network delay
-            val newPost = PostEntity(
-                id = java.util.UUID.randomUUID().toString(),
-                userId = "2", // Using an existing dummy user
-                imageUrl = "https://picsum.photos/400/400?random=${System.currentTimeMillis()}",
-                caption = "Just refreshed my feed! \uD83D\uDE0A",
-                likesCount = (10..500).random(),
-                commentsCount = (0..50).random(),
-                timeAgo = "Just now",
-                isLiked = false,
-                isSaved = false
-            )
-            postRepository.insertPost(newPost)
             onComplete()
+        }
+    }
+    
+    fun uploadSnaply(uriString: String) {
+        viewModelScope.launch {
+            val userId = authRepository.currentUserId.firstOrNull() ?: return@launch
+            
+            try {
+                val uploadedUrl = postRepository.uploadImage(android.net.Uri.parse(uriString))
+                val newSnaply = SnaplyEntity(
+                    id = "snaply_${System.currentTimeMillis()}",
+                    userId = userId,
+                    imageUrl = uploadedUrl,
+                    timestamp = System.currentTimeMillis()
+                )
+                postRepository.insertSnaply(newSnaply)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -88,7 +130,8 @@ class HomeViewModel(
                 val application = pixelVerseApplication()
                 HomeViewModel(
                     application.container.postRepository,
-                    application.container.userRepository
+                    application.container.userRepository,
+                    application.container.authRepository
                 )
             }
         }

@@ -11,14 +11,17 @@ import com.example.data.local.entity.MessageEntity
 import com.example.data.local.entity.PostEntity
 import com.example.data.local.entity.UserEntity
 
+import com.example.data.local.entity.SnaplyEntity
+
 @Database(
     entities = [
         UserEntity::class,
         PostEntity::class,
         CommentEntity::class,
-        MessageEntity::class
+        MessageEntity::class,
+        SnaplyEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

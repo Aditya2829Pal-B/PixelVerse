@@ -19,13 +19,22 @@ class AddPostViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    fun createPost(imageUrl: String, caption: String) {
+    fun createPost(imageUri: String, caption: String) {
         viewModelScope.launch {
             val userId = authRepository.currentUserId.firstOrNull() ?: return@launch
+            
+            // Upload the image to Firebase Storage first
+            val uploadedUrl = try {
+                postRepository.uploadImage(android.net.Uri.parse(imageUri))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@launch
+            }
+            
             val newPost = PostEntity(
                 id = "post_${System.currentTimeMillis()}",
                 userId = userId,
-                imageUrl = imageUrl,
+                imageUrl = uploadedUrl,
                 caption = caption,
                 likesCount = 0,
                 commentsCount = 0,

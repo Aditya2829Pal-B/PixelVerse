@@ -1,13 +1,45 @@
 package com.example.data.repository
 
+import android.net.Uri
 import com.example.data.local.entity.PostEntity
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
-class PostRepository(private val firestore: FirebaseFirestore) {
+import com.example.data.local.entity.SnaplyEntity
+
+class PostRepository(private val firestore: FirebaseFirestore, private val storage: FirebaseStorage) {
+    
+    suspend fun uploadImage(uri: Uri): String {
+        val fileName = UUID.randomUUID().toString()
+        val ref = storage.reference.child("images/$fileName")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
+    val allSnaplies: Flow<List<SnaplyEntity>> = callbackFlow {
+        val listener = firestore.collection("snaplies")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val snaplies = snapshot.documents.mapNotNull { it.toObject(SnaplyEntity::class.java) }
+                    trySend(snaplies)
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun insertSnaply(snaply: SnaplyEntity) {
+        firestore.collection("snaplies").document(snaply.id).set(snaply).await()
+    }
+
     val allPosts: Flow<List<PostEntity>> = callbackFlow {
         val listener = firestore.collection("posts")
             .addSnapshotListener { snapshot, error ->

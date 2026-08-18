@@ -17,6 +17,8 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
+import com.google.firebase.storage.storage
+
 interface AppContainer {
     val database: AppDatabase
     val postRepository: PostRepository
@@ -35,7 +37,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
     
     override val postRepository: PostRepository by lazy {
-        PostRepository(Firebase.firestore)
+        PostRepository(Firebase.firestore, Firebase.storage)
     }
     
     override val userRepository: UserRepository by lazy {

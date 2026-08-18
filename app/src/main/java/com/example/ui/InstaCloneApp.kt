@@ -193,10 +193,20 @@ fun PlaceholderScreen(title: String) {
 @Composable
 fun HomeFeedScreen(
     navController: NavController,
-    feedViewModel: ApiFeedViewModel = viewModel(factory = ApiFeedViewModel.Factory)
+    feedViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
 ) {
     val posts by feedViewModel.feedPosts.collectAsState()
-    val isLoading by feedViewModel.isLoading.collectAsState()
+    val snaplies by feedViewModel.feedSnaplies.collectAsState()
+    val isLoading = false
+    
+    val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> 
+            if (uri != null) {
+                feedViewModel.uploadSnaply(uri.toString())
+            }
+        }
+    )
     
     var isRefreshing by remember { mutableStateOf(false) }
     var showCameraDialog by remember { mutableStateOf(false) }
@@ -246,14 +256,6 @@ fun HomeFeedScreen(
             )
         }
     }
-
-    // Infinite scroll
-    LaunchedEffect(listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index) {
-        val lastIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-        if (lastIndex >= posts.size - 2 && !isLoading && posts.isNotEmpty()) {
-            feedViewModel.loadMorePosts()
-        }
-    }
     
     Scaffold(
         topBar = {
@@ -292,9 +294,17 @@ fun HomeFeedScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 item {
-                    SnapliesRow(snaplies = MockData.snaplies, onSnaplyClick = { snaply ->
-                        selectedSnaply = snaply
-                    })
+                    SnapliesRow(
+                        snaplies = snaplies, 
+                        onSnaplyClick = { snaply ->
+                            selectedSnaply = snaply
+                        },
+                        onAddSnaplyClick = {
+                            photoPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
                 }
                 items(posts) { post ->
@@ -323,7 +333,7 @@ fun HomeFeedScreen(
 }
 
 @Composable
-fun SnapliesRow(snaplies: List<Snaply>, onSnaplyClick: (Snaply) -> Unit) {
+fun SnapliesRow(snaplies: List<Snaply>, onSnaplyClick: (Snaply) -> Unit, onAddSnaplyClick: () -> Unit) {
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -338,7 +348,7 @@ fun SnapliesRow(snaplies: List<Snaply>, onSnaplyClick: (Snaply) -> Unit) {
                 username = "Your Snaply",
                 isViewed = true,
                 isAddSnaply = true,
-                onClick = {}
+                onClick = onAddSnaplyClick
             )
         }
         items(snaplies) { snaply ->
@@ -836,7 +846,7 @@ fun ProfileStat(count: String, label: String) {
 fun FullScreenSnaplyViewer(snaply: com.example.data.Snaply, onDismiss: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         AsyncImage(
-            model = "https://picsum.photos/seed/${snaply.id}/800/1200",
+            model = snaply.imageUrl,
             contentDescription = "Snaply content",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
