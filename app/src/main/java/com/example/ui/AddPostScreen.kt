@@ -31,11 +31,23 @@ fun AddPostScreen(
 ) {
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var caption by remember { mutableStateOf("") }
+    var showCamera by remember { mutableStateOf(false) }
     
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> imageUri = uri }
     )
+
+    if (showCamera) {
+        CameraCaptureScreen(
+            onImageCaptured = { uri ->
+                imageUri = uri
+                showCamera = false
+            },
+            onClose = { showCamera = false }
+        )
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -75,15 +87,23 @@ fun AddPostScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Button(
-                        onClick = { 
-                            photoPickerLauncher.launch(
-                                androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0095F6))
-                    ) {
-                        Text("Select Photo", fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Button(
+                            onClick = { showCamera = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0095F6))
+                        ) {
+                            Text("Take Photo", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { 
+                                photoPickerLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        ) {
+                            Text("Select from Gallery", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {
