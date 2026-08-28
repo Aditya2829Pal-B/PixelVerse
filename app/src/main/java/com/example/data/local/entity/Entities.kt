@@ -24,7 +24,8 @@ data class PostEntity(
     val commentsCount: Int = 0,
     val timeAgo: String = "",
     val isLiked: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val mediaType: String = "IMAGE"
 )
 
 @Entity(tableName = "comments")

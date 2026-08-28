@@ -473,43 +473,52 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
             Icon(Icons.Default.MoreVert, contentDescription = "More options")
         }
 
-        // Image and Heart Animation
+        // Image or Video and Heart Animation
         Box(contentAlignment = Alignment.Center) {
-            AsyncImage(
-                model = post.imageUrl,
-                contentDescription = "Post image",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f) // Square image
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onDoubleTap = {
-                                if (!localIsLiked) {
-                                    handleLikeToggle()
-                                    scope.launch {
-                                        likeButtonScale.animateTo(1.3f, animationSpec = androidx.compose.animation.core.tween(100))
-                                        likeButtonScale.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(100))
-                                    }
-                                }
+            val mediaModifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f) // Square image
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            if (!localIsLiked) {
+                                handleLikeToggle()
                                 scope.launch {
-                                    showHeart = true
-                                    heartScale.snapTo(0f)
-                                    heartScale.animateTo(
-                                        targetValue = 1.2f,
-                                        animationSpec = tween(200)
-                                    )
-                                    delay(200)
-                                    heartScale.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(200)
-                                    )
-                                    showHeart = false
+                                    likeButtonScale.animateTo(1.3f, animationSpec = androidx.compose.animation.core.tween(100))
+                                    likeButtonScale.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(100))
                                 }
                             }
-                        )
-                    }
-            )
+                            scope.launch {
+                                showHeart = true
+                                heartScale.snapTo(0f)
+                                heartScale.animateTo(
+                                    targetValue = 1.2f,
+                                    animationSpec = tween(200)
+                                )
+                                delay(200)
+                                heartScale.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = tween(200)
+                                )
+                                showHeart = false
+                            }
+                        }
+                    )
+                }
+
+            if (post.mediaType == "VIDEO") {
+                VideoPlayer(
+                    videoUrl = post.imageUrl,
+                    modifier = mediaModifier
+                )
+            } else {
+                AsyncImage(
+                    model = post.imageUrl,
+                    contentDescription = "Post image",
+                    contentScale = ContentScale.Crop,
+                    modifier = mediaModifier
+                )
+            }
             
             if (showHeart) {
                 Icon(

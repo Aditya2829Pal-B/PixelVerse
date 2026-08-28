@@ -19,13 +19,13 @@ class AddPostViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    fun createPost(imageUri: String, caption: String) {
+    fun createPost(mediaUri: String, caption: String, mediaType: String = "IMAGE") {
         viewModelScope.launch {
             val userId = authRepository.currentUserId.firstOrNull() ?: return@launch
             
-            // Upload the image to Firebase Storage first
+            // Upload the media to Firebase Storage first
             val uploadedUrl = try {
-                postRepository.uploadImage(android.net.Uri.parse(imageUri))
+                postRepository.uploadImage(android.net.Uri.parse(mediaUri))
             } catch (e: Exception) {
                 e.printStackTrace()
                 return@launch
@@ -34,13 +34,14 @@ class AddPostViewModel(
             val newPost = PostEntity(
                 id = "post_${System.currentTimeMillis()}",
                 userId = userId,
-                imageUrl = uploadedUrl,
+                imageUrl = uploadedUrl, // we use imageUrl field for both image and video URLs for simplicity
                 caption = caption,
                 likesCount = 0,
                 commentsCount = 0,
                 timeAgo = "Just now",
                 isLiked = false,
-                isSaved = false
+                isSaved = false,
+                mediaType = mediaType
             )
             postRepository.insertPost(newPost)
         }

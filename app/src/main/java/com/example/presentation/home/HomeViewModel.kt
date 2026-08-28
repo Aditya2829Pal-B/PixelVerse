@@ -83,7 +83,8 @@ class HomeViewModel(
                 commentsCount = entity.commentsCount,
                 timeAgo = entity.timeAgo,
                 isLiked = entity.isLiked,
-                isSaved = entity.isSaved
+                isSaved = entity.isSaved,
+                mediaType = entity.mediaType
             )
         }.reversed()
     }.stateIn(

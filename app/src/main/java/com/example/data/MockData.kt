@@ -23,7 +23,8 @@ data class Post(
     val commentsCount: Int,
     val timeAgo: String,
     val isLiked: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val mediaType: String = "IMAGE"
 )
 
 data class Comment(

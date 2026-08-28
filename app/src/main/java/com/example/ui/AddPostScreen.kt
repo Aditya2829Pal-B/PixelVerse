@@ -60,9 +60,12 @@ fun AddPostScreen(
                 },
                 actions = {
                     if (imageUri != null) {
+                        val context = LocalContext.current
                         TextButton(onClick = { 
                             // Publish
-                            addPostViewModel.createPost(imageUri.toString(), caption)
+                            val mimeType = context.contentResolver.getType(imageUri!!) ?: ""
+                            val mediaType = if (mimeType.startsWith("video/")) "VIDEO" else "IMAGE"
+                            addPostViewModel.createPost(imageUri.toString(), caption, mediaType)
                             navController.navigate("home") {
                                 popUpTo("home") { inclusive = true }
                             }
@@ -98,7 +101,7 @@ fun AddPostScreen(
                         OutlinedButton(
                             onClick = { 
                                 photoPickerLauncher.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                 )
                             }
                         ) {
@@ -121,7 +124,7 @@ fun AddPostScreen(
                             .size(80.dp)
                             .clickable {
                                 photoPickerLauncher.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                 )
                             }
                     )

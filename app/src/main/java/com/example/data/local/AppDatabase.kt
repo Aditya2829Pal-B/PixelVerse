@@ -21,7 +21,7 @@ import com.example.data.local.entity.SnaplyEntity
         MessageEntity::class,
         SnaplyEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

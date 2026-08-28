@@ -1,6 +1,6 @@
 {
-  "name": "InstaClone",
-  "description": "A functional Instagram clone with a feed and profile, built with Jetpack Compose.",
+  "name": "PixelVerse",
+  "description": "A modern Instagram-like social media app featuring mixed-media feeds, Snaplies (stories), and a custom CameraX capture flow.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
