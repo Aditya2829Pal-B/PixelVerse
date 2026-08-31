@@ -30,11 +30,14 @@ data class PostEntity(
 
 @Entity(tableName = "comments")
 data class CommentEntity(
-    @PrimaryKey val id: String,
-    val postId: String,
-    val userId: String,
-    val text: String,
-    val timeAgo: String
+    @PrimaryKey val id: String = "",
+    val postId: String = "",
+    val userId: String = "",
+    val username: String = "",
+    val profilePicUrl: String = "",
+    val text: String = "",
+    val timeAgo: String = "",
+    val timestamp: Long = 0L
 )
 
 @Entity(tableName = "messages")

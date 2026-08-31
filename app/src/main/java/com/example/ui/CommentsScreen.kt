@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,18 +19,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.data.Comment
-import com.example.data.MockData
 import com.example.data.Post
+import com.example.data.local.entity.CommentEntity
+import com.example.presentation.comments.CommentsViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommentsBottomSheet(post: Post, onDismiss: () -> Unit) {
+fun CommentsBottomSheet(
+    post: Post,
+    onDismiss: () -> Unit,
+    commentsViewModel: CommentsViewModel = viewModel(factory = CommentsViewModel.Factory(post.id))
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var text by remember { mutableStateOf("") }
     
-    // Filter comments for this post
-    val postComments = MockData.comments.filter { it.postId == post.id }
+    val postComments by commentsViewModel.comments.collectAsState()
+    val currentUser by commentsViewModel.currentUser.collectAsState()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -75,7 +80,7 @@ fun CommentsBottomSheet(post: Post, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = MockData.currentUser.profilePicUrl,
+                    model = currentUser?.profilePicUrl ?: "",
                     contentDescription = "Your Profile",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -99,17 +104,10 @@ fun CommentsBottomSheet(post: Post, onDismiss: () -> Unit) {
                 )
                 if (text.isNotBlank()) {
                     IconButton(onClick = {
-                        val newComment = Comment(
-                            id = "comment_${System.currentTimeMillis()}",
-                            postId = post.id,
-                            user = MockData.currentUser,
-                            text = text,
-                            timeAgo = "Just now"
-                        )
-                        MockData.comments.add(newComment)
+                        commentsViewModel.addComment(text)
                         text = ""
                     }) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = Color(0xFF0095F6))
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color(0xFF0095F6))
                     }
                 }
             }
@@ -120,14 +118,14 @@ fun CommentsBottomSheet(post: Post, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun CommentItem(comment: Comment) {
+fun CommentItem(comment: CommentEntity) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
         AsyncImage(
-            model = comment.user.profilePicUrl,
+            model = comment.profilePicUrl,
             contentDescription = "Profile Pic",
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -138,7 +136,7 @@ fun CommentItem(comment: Comment) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = comment.user.username,
+                    text = comment.username,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -157,18 +155,7 @@ fun CommentItem(comment: Comment) {
         }
         
         // Delete option for own comments
-        if (comment.user.id == MockData.currentUser.id) {
-            IconButton(
-                onClick = { MockData.comments.remove(comment) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete Comment",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+        // Note: For full implementation, we'd add delete functionality in ViewModel
+        // if (comment.userId == currentUser.id) { ... }
     }
 }

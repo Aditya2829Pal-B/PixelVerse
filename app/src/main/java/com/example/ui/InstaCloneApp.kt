@@ -433,7 +433,7 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
     
     val isSaved = post.isSaved
     
-    val dynamicCommentsCount = MockData.comments.count { it.postId == post.id }
+    val dynamicCommentsCount = post.commentsCount
     
     val scope = rememberCoroutineScope()
     var showHeart by remember { mutableStateOf(false) }

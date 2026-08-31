@@ -11,6 +11,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 import com.example.data.local.entity.SnaplyEntity
+import com.example.data.local.entity.CommentEntity
 
 class PostRepository(private val firestore: FirebaseFirestore, private val storage: FirebaseStorage) {
     
@@ -73,6 +74,30 @@ class PostRepository(private val firestore: FirebaseFirestore, private val stora
         firestore.collection("posts").document(postId)
             .update("likesCount", com.google.firebase.firestore.FieldValue.increment(increment),
                     "isLiked", isLiked).await()
+    }
+
+    fun getCommentsForPost(postId: String): Flow<List<CommentEntity>> = callbackFlow {
+        val listener = firestore.collection("comments")
+            .whereEqualTo("postId", postId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val comments = snapshot.documents.mapNotNull { it.toObject(CommentEntity::class.java) }
+                    trySend(comments)
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun addComment(comment: CommentEntity) {
+        firestore.collection("comments").document(comment.id).set(comment).await()
+        // Increment commentsCount in post
+        firestore.collection("posts").document(comment.postId)
+            .update("commentsCount", com.google.firebase.firestore.FieldValue.increment(1L)).await()
     }
 }
 
