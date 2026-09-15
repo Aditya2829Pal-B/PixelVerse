@@ -21,6 +21,7 @@ import com.example.data.repository.AuthRepository
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 class ProfileViewModel(
     private val userRepository: UserRepository,
@@ -83,6 +84,21 @@ class ProfileViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    fun toggleFollow(targetUserId: String, isFollowing: Boolean) {
+        viewModelScope.launch {
+            val currentUserId = authRepository.currentUserId.value ?: return@launch
+            userRepository.toggleFollowUser(currentUserId, targetUserId, isFollowing)
+        }
+    }
+
+    fun addTestFollowerAndFollowing() {
+        viewModelScope.launch {
+            val currentUserId = authRepository.currentUserId.value ?: return@launch
+            // For testing: we follow ourselves to increment both followers and following instantly
+            userRepository.toggleFollowUser(currentUserId, currentUserId, false)
+        }
+    }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {

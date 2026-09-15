@@ -41,7 +41,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
     
     override val userRepository: UserRepository by lazy {
-        UserRepository(database.userDao())
+        UserRepository(database.userDao(), Firebase.firestore)
     }
     
     override val authRepository: AuthRepository by lazy {

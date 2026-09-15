@@ -723,7 +723,8 @@ fun ProfileScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = displayUser.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(text = "Android Developer \uD83D\uDCBB\nKeep composing!", fontSize = 14.sp)
+                    // If the user's bio/name is basically a real bio, we can display it. 
+                    // Let's remove the hardcoded "Android Developer" text.
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -746,7 +747,7 @@ fun ProfileScreen(
                             Text("Share profile", fontWeight = FontWeight.SemiBold)
                         }
                         Button(
-                            onClick = { },
+                            onClick = { profileViewModel.addTestFollowerAndFollowing() },
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onBackground),
                             contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp)
