@@ -16,10 +16,15 @@ import com.example.data.local.entity.CommentEntity
 class PostRepository(private val firestore: FirebaseFirestore, private val storage: FirebaseStorage) {
     
     suspend fun uploadImage(uri: Uri): String {
-        val fileName = UUID.randomUUID().toString()
-        val ref = storage.reference.child("images/$fileName")
-        ref.putFile(uri).await()
-        return ref.downloadUrl.await().toString()
+        return try {
+            val fileName = UUID.randomUUID().toString()
+            val ref = storage.reference.child("images/$fileName")
+            ref.putFile(uri).await()
+            ref.downloadUrl.await().toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            uri.toString()
+        }
     }
 
     val allSnaplies: Flow<List<SnaplyEntity>> = callbackFlow {

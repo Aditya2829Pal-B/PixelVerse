@@ -12,6 +12,9 @@ import com.example.utils.pixelVerseApplication
 import kotlinx.coroutines.launch
 
 import com.example.data.repository.AuthRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 
 class AddPostViewModel(
@@ -19,31 +22,40 @@ class AddPostViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    fun createPost(mediaUri: String, caption: String, mediaType: String = "IMAGE") {
+    private val _isSubmitting = MutableStateFlow(false)
+    val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
+
+    fun createPost(mediaUri: String, caption: String, mediaType: String = "IMAGE", onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            val userId = authRepository.currentUserId.firstOrNull() ?: return@launch
-            
-            // Upload the media to Firebase Storage first
-            val uploadedUrl = try {
-                postRepository.uploadImage(android.net.Uri.parse(mediaUri))
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return@launch
+            _isSubmitting.value = true
+            try {
+                val userId = authRepository.currentUserId.firstOrNull() ?: "current_user"
+                
+                // Upload the media to Firebase Storage first (falls back to local uri if offline/error)
+                val uploadedUrl = try {
+                    postRepository.uploadImage(android.net.Uri.parse(mediaUri))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    mediaUri
+                }
+                
+                val newPost = PostEntity(
+                    id = "post_${System.currentTimeMillis()}",
+                    userId = userId,
+                    imageUrl = uploadedUrl, // we use imageUrl field for both image and video URLs for simplicity
+                    caption = caption,
+                    likesCount = 0,
+                    commentsCount = 0,
+                    timeAgo = "Just now",
+                    isLiked = false,
+                    isSaved = false,
+                    mediaType = mediaType
+                )
+                postRepository.insertPost(newPost)
+                onComplete()
+            } finally {
+                _isSubmitting.value = false
             }
-            
-            val newPost = PostEntity(
-                id = "post_${System.currentTimeMillis()}",
-                userId = userId,
-                imageUrl = uploadedUrl, // we use imageUrl field for both image and video URLs for simplicity
-                caption = caption,
-                likesCount = 0,
-                commentsCount = 0,
-                timeAgo = "Just now",
-                isLiked = false,
-                isSaved = false,
-                mediaType = mediaType
-            )
-            postRepository.insertPost(newPost)
         }
     }
 

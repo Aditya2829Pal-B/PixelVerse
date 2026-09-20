@@ -33,7 +33,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             context,
             AppDatabase::class.java,
             "pixelverse_database"
-        ).fallbackToDestructiveMigration().build()
+        ).fallbackToDestructiveMigration(dropAllTables = true).build()
     }
     
     override val postRepository: PostRepository by lazy {
