@@ -58,4 +58,15 @@ class UserRepository(
         
         batch.commit().await()
     }
+
+    suspend fun updateUserProfile(userId: String, username: String, bio: String, picUrl: String) {
+        val userRef = firestore.collection("users").document(userId)
+        userRef.update(
+            mapOf(
+                "username" to username,
+                "bio" to bio,
+                "profilePicUrl" to picUrl
+            )
+        ).await()
+    }
 }

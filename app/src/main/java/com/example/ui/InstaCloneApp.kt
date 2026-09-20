@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -197,6 +198,7 @@ fun HomeFeedScreen(
 ) {
     val posts by feedViewModel.feedPosts.collectAsState()
     val snaplies by feedViewModel.feedSnaplies.collectAsState()
+    val viewedSnaplyIds by feedViewModel.viewedSnaplyIds.collectAsState()
     val isLoading = false
     
     val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -239,24 +241,25 @@ fun HomeFeedScreen(
     
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     
-    var selectedSnaply by remember { mutableStateOf<com.example.data.Snaply?>(null) }
+    var activeSnaplyIndex by remember { mutableIntStateOf(-1) }
+    var selectedPostForComments by remember { mutableStateOf<com.example.data.Post?>(null) }
 
-    if (selectedSnaply != null) {
-        androidx.compose.ui.window.Dialog(
-            onDismissRequest = { selectedSnaply = null },
-            properties = androidx.compose.ui.window.DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
-        ) {
-            FullScreenSnaplyViewer(
-                snaply = selectedSnaply!!,
-                onDismiss = { selectedSnaply = null }
-            )
-        }
+    if (activeSnaplyIndex in snaplies.indices) {
+        SnaplyStoryViewer(
+            snaplies = snaplies,
+            initialIndex = activeSnaplyIndex,
+            onDismiss = { activeSnaplyIndex = -1 },
+            onSnaplyViewed = { id -> feedViewModel.markSnaplyAsViewed(id) }
+        )
     }
     
+    if (selectedPostForComments != null) {
+        CommentsBottomSheet(
+            post = selectedPostForComments!!,
+            onDismiss = { selectedPostForComments = null }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -268,7 +271,7 @@ fun HomeFeedScreen(
                         Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Likes")
                     }
                     IconButton(onClick = { navController.navigate("messages") }) {
-                        Icon(Icons.Outlined.Send, contentDescription = "Messages")
+                        Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Messages")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -289,15 +292,17 @@ fun HomeFeedScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                item {
-                    SnapliesRow(
-                        snaplies = snaplies, 
-                        onSnaplyClick = { snaply ->
-                            selectedSnaply = snaply
+            VerticalFeedComponent(
+                posts = posts,
+                listState = listState,
+                isLoading = isLoading,
+                headerContent = {
+                    SnapliesCarousel(
+                        snaplies = snaplies,
+                        currentUserProfilePic = MockData.currentUser.profilePicUrl,
+                        viewedSnaplyIds = viewedSnaplyIds,
+                        onSnaplyClick = { _, index ->
+                            activeSnaplyIndex = index
                         },
                         onAddSnaplyClick = {
                             photoPickerLauncher.launch(
@@ -305,29 +310,17 @@ fun HomeFeedScreen(
                             )
                         }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
+                },
+                onLikeToggle = { id, currentLikeStatus ->
+                    feedViewModel.toggleLike(id, currentLikeStatus)
+                },
+                onCommentClick = { post ->
+                    selectedPostForComments = post
+                },
+                onSeedSamplePosts = {
+                    feedViewModel.seedSamplePosts()
                 }
-                items(posts) { post ->
-                    PostItem(
-                        post = post,
-                        onLikeToggle = { id, currentLikeStatus ->
-                            feedViewModel.toggleLike(id, currentLikeStatus)
-                        }
-                    )
-                }
-                if (isLoading && posts.isNotEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                        }
-                    }
-                }
-            }
+            )
         }
     }
 }
@@ -565,7 +558,7 @@ fun PostItem(post: Post, onLikeToggle: (String, Boolean) -> Unit = { _, _ -> }) 
                     Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comment")
                 }
                 IconButton(onClick = { }) {
-                    Icon(Icons.Outlined.Send, contentDescription = "Share")
+                    Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Share")
                 }
             }
             IconButton(onClick = { 
@@ -634,22 +627,74 @@ fun ExploreScreen(
     exploreViewModel: ExploreViewModel = viewModel(factory = ExploreViewModel.Factory)
 ) {
     val images by exploreViewModel.exploreImages.collectAsState()
+    val searchQuery by exploreViewModel.searchQuery.collectAsState()
+    val searchResults by exploreViewModel.searchResults.collectAsState()
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(images) { imageUrl ->
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-            )
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { exploreViewModel.updateSearchQuery(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            placeholder = { Text("Search users...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            shape = androidx.compose.foundation.shape.CircleShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            singleLine = true
+        )
+
+        if (searchQuery.isNotBlank()) {
+            // Show Search Results
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(searchResults) { user ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = user.profilePicUrl,
+                            contentDescription = "Profile Pic",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(user.username, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(user.bio, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        } else {
+            // Show Explore Grid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(images) { imageUrl ->
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                    )
+                }
+            }
         }
     }
 }
@@ -666,6 +711,8 @@ fun ProfileScreen(
     // Fallback if not loaded
     val displayUser = user ?: return
     
+    var showEditProfile by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -729,7 +776,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { },
+                            onClick = { showEditProfile = true },
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onBackground),
@@ -838,6 +885,73 @@ fun ProfileScreen(
             }
             
             item {
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+    
+    if (showEditProfile) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showEditProfile = false },
+            sheetState = sheetState
+        ) {
+            var editName by remember { mutableStateOf(displayUser.username) }
+            var editBio by remember { mutableStateOf(displayUser.name) }
+            var editPicUrl by remember { mutableStateOf(displayUser.profilePicUrl) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Edit Profile", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AsyncImage(
+                    model = editPicUrl.ifEmpty { "https://picsum.photos/150" },
+                    contentDescription = "Profile Pic",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = editPicUrl,
+                    onValueChange = { editPicUrl = it },
+                    label = { Text("Profile Picture URL") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = { editName = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = editBio,
+                    onValueChange = { editBio = it },
+                    label = { Text("Bio") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        profileViewModel.updateProfile(editName, editBio, editPicUrl)
+                        showEditProfile = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save Changes")
+                }
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }

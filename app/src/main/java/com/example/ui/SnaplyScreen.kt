@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -84,7 +84,7 @@ fun SnaplyVideoItem(imageUrl: String, modifier: Modifier = Modifier) {
 
             IconButton(onClick = { }) {
                 Icon(
-                    Icons.Outlined.Send,
+                    Icons.AutoMirrored.Outlined.Send,
                     contentDescription = "Share",
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)

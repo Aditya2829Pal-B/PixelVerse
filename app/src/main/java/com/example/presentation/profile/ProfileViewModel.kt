@@ -92,6 +92,13 @@ class ProfileViewModel(
         }
     }
 
+    fun updateProfile(newUsername: String, newBio: String, newPicUrl: String) {
+        viewModelScope.launch {
+            val currentUserId = authRepository.currentUserId.value ?: return@launch
+            userRepository.updateUserProfile(currentUserId, newUsername, newBio, newPicUrl)
+        }
+    }
+
     fun addTestFollowerAndFollowing() {
         viewModelScope.launch {
             val currentUserId = authRepository.currentUserId.value ?: return@launch
